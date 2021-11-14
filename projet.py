@@ -49,64 +49,11 @@ def timed(func):
 
     return wrapper
 
-@timed
-@st.cache(suppress_st_warning=True, allow_output_mutation=True, persist=True)
-def load_data_raw(url, delimiter):
-    data=pd.read_csv(url, delimiter)
-
-    data["Date/Time"] = pd.to_datetime(data["Date/Time"])
-
-    data['day'] = data['Date/Time'].map(get_dom)
-
-    data['weekday'] = data['Date/Time'].map(get_weekday)
-
-    data['hour'] = data['Date/Time'].map(get_hour)
-
-    data['minute'] = data['Date/Time'].map(get_minute)
-
-    return data
-
-@timed
-@st.cache(suppress_st_warning=True, allow_output_mutation=True, persist=True)
-def load_data_ny(url, delimiter):
-
-    data = pd.read_csv(url, delimiter)
-
-    data['tpep_pickup_datetime'] = data['tpep_pickup_datetime'].map(pd.to_datetime)
-    data['tpep_dropoff_datetime'] = data['tpep_dropoff_datetime'].map(pd.to_datetime)
-
-    #Pickup datetime transformation and insertion in new column using get_... functions
-    data['day_pickup'] = data['tpep_pickup_datetime'].map(get_dom)
-
-    data['weekday_pickup'] = data['tpep_pickup_datetime'].map(get_weekday)
-
-    data['hour_pickup'] = data['tpep_pickup_datetime'].map(get_hour)
-
-    data['minute_pickup'] = data['tpep_pickup_datetime'].map(get_minute)
-
-
-    #Dropoff datetime transformation and insertion in new column using get_... functions
-    data['day_dropoff'] = data['tpep_dropoff_datetime'].map(get_dom)
-
-    data['weekday_dropoff'] = data['tpep_dropoff_datetime'].map(get_weekday)
-
-    data['hour_dropoff'] = data['tpep_dropoff_datetime'].map(get_hour)
-
-    data['minute_dropoff'] = data['tpep_dropoff_datetime'].map(get_minute)
-
-    data['trip_duration'] = (data['tpep_dropoff_datetime'] - data['tpep_pickup_datetime'])
-    #Create a new column 'trip_duration' by substract dropoff datetime by pickup datetime and compute it in minutes
-    data['trip_duration'] = pd.to_timedelta(data['trip_duration']).dt.total_seconds()/60
-
-    #Create a column 'average_speed' by dividing trip distance by trip duration in hour
-    data['average_speed'] = data["trip_distance"] / (data["trip_duration"] / 60) 
-
-    return data
 
 @st.cache(allow_output_mutation=True)
-def dflalon(df):
-    dflalon = df[['latitude','longitude']]
-    return dflalon
+def get_df_lat_lon(df):
+    get_df_lat_lon = df[['latitude','longitude']]
+    return get_df_lat_lon
 
 def get_month(dt):
     return dt.month
@@ -155,61 +102,65 @@ def map(data, lat, lon, zoom):
     ))
 
 ############### START PROJECTS FUNCTIONS #########
+
 @st.cache(suppress_st_warning=True, allow_output_mutation=True, persist=True)
-def load_data(url, delimiter, p):
-    df = pd.read_csv(url,delimiter,skiprows=lambda i: i>0 and random.random() > p)
-    #df = pd.read_csv(url, delimiter)
+def load_data_by_year(year):
+
+    df = pd.read_csv('./Ressources/' + str(year) + '_final.csv', ',')
+
+    #Pre-process data
+    df['date_mutation'] = df['date_mutation'].map(pd.to_datetime)
+    df['code_departement'] = df['code_departement'].map(str)
+    df['transaction_type'] = df['type_local']
+
+    df['day'] = df['date_mutation'].map(get_dom)
+    df['month'] = df['date_mutation'].map(get_month)
+    df['year'] = df['date_mutation'].map(get_year)
 
     return df
 
+@st.cache(suppress_st_warning=True, allow_output_mutation=True, persist=True)
+def load_all_data(df_2017, df_2018, df_2019, df_2020):
+        
+    frames = [df_2017, df_2018, df_2019, df_2020]
+    df = pd.concat(frames)
 
-@timed
+    return df
+
+xx = """ @timed
 @st.cache(suppress_st_warning=True, allow_output_mutation=True, persist=True)
 def load_all_data(percent):
   #df_full = load_data('full.csv', ',')
 
   df_2016 = load_data('full_2016.csv', ',', percent)
-  #df_2017 = load_data('full_2017.csv', ',')
-  #df_2018 = load_data('full_2018.csv', ',')
-  #df_2019 = load_data('full_2019.csv', ',')
-  #df_2020 = load_data('full_2020.csv', ',')
+  df_2017 = load_data('full_2017.csv', ',', percent)
+  df_2018 = load_data('full_2018.csv', ',', percent)
+  df_2019 = load_data('full_2019.csv', ',', percent)
+  df_2020 = load_data('full_2020.csv', ',', percent)
 
-  #frames = [df_2016, df_2017, df_2018, df_2019, df_2020]
+  frames = [df_2016, df_2017, df_2018, df_2019, df_2020]
   #frames = [df_2016, df_2017]
 
-  #df = pd.concat(frames)
-  df = df_2016
+  df = pd.concat(frames)
+  #df = df_2016
 
   #Pre-process data
-  df_2016['date_mutation'] = df_2016['date_mutation'].map(pd.to_datetime)
-  df_2016['code_departement'] = df_2016['code_departement'].map(str)
+  df['date_mutation'] = df['date_mutation'].map(pd.to_datetime)
+  df['code_departement'] = df['code_departement'].map(str)
 
   df['day'] = df['date_mutation'].map(get_dom)
   df['month'] = df['date_mutation'].map(get_month)
   df['year'] = df['date_mutation'].map(get_year)
 
-  return df_2016
+  return df """
 
 
 ############ END FUNTIONS ############
 
 ############ START EXECUTION #########
 
-df=load_data_raw('uber-raw-data-apr14.csv', ',')
-dfNy = load_data_ny("ny-trips-data.csv",',')
-
-df_RE = load_all_data(0.05)
 
 
-file_ = open("chart1.png", "rb")
-contents = file_.read()
-data_url_chart1 = base64.b64encode(contents).decode("utf-8")
-file_.close()
-
-file_ = open("chart2.png", "rb")
-contents = file_.read()
-data_url_chart2 = base64.b64encode(contents).decode("utf-8")
-file_.close()
 
 
 
@@ -219,11 +170,9 @@ file_.close()
 
 
 
-option = 'Uber April 2014'
-st.write(df_RE.head())
-st.write(df_RE.tail())
 
-if option == 'Uber April 2014':
+
+def print_main(df_RE):
 
 
     st.markdown("<h1 style='text-align: center;font-family=\'Helvetica\';'>PROJECT - Valeurs foncières Visualization 👁</h1>", unsafe_allow_html=True)
@@ -236,8 +185,6 @@ if option == 'Uber April 2014':
     col1, col2 = expander.columns(2)
     col1.metric("Nombre de lignes", df_RE.shape[0])
     col2.metric("Nombre de colonnes", df_RE.shape[1])
-    expander.write(df_RE.head())
-    expander.write(df_RE.tail())
 
 
 
@@ -337,8 +284,9 @@ if option == 'Uber April 2014':
 
     #External plot (using plotly) - N°3
     #Filtered data for chart "Repartition of real estate's types transactions"
+
     labels=['House',"Apartment","Dependency","Industrial and commercial premises"]
-    values = transactions_slider_price_data['type_local'].value_counts()
+    values = df_RE['transaction_type'].value_counts()
 
     #Pie chart of Mutations' types repartition
     right_col_price.markdown("<h4 style='text-align: center;margin-left: -10%;font-family=\'Helvetica\';'><b>Repartition of real estate's types transactions in the selected price range</b></h4>", unsafe_allow_html=True)
@@ -355,99 +303,85 @@ if option == 'Uber April 2014':
     #Map of all transactions in metropolitain france
     st.markdown("<h4 style='text-align: center;margin-left: -10%;font-family=\'Helvetica\';'><b>HeatMap of transactions across France 🇫🇷</b></h4>", unsafe_allow_html=True)
 
-    fig = px.density_mapbox(dflalon(df_RE), lat='latitude', lon='longitude',center=dict(lat=47.00, lon=2.19), zoom=5, radius=1)
-    fig.update_layout(width=1200, height=800, mapbox_style="open-street-map")
-    st.plotly_chart(fig)
+    map_left, map_right = st.columns(2)
 
-
-
-
-
-    xxxx = '''
-    st.markdown("<h2 style='text-align: center;font-family=\'Helvetica\';'><b>Visualization by hour(s) and by date(s) 🕦</b></h2><br/>", unsafe_allow_html=True)
-
+    type = map_left.radio(
+        "Select the transactions\' types you want to see on the map:",
+        ('Houses', 'Apartments', 'Dependency', 'Industrial or commercial premises'))
     
-    #Breakdown of rides per minute between 0:00 and 1:00
-    left_column1, right_column1 = st.columns(2)
+    type_radio_condition = (df_RE['type_local'] == "Global")
 
-    breakdown = right_column1.slider(
-    "Select time range (of one hour, or more..) to visualize breakdown of rides :",
-    0, 
-    23, 
-    value=(8, 22))
+    if type == 'Houses':
+        type_radio_condition = (df_RE['type_local'] == "Maison")
+        type_radio_data = df_RE[type_radio_condition]
 
-    breakdown_hour_start = breakdown[0]
-    breakdown_hour_end = breakdown[1]
+    elif type == "Apartments":
+        type_radio_condition = (df_RE['type_local'] == "Appartement")
+        type_radio_data = df_RE[type_radio_condition]
 
-    selected_day = 1
-    breakdown_day = left_column1.date_input(
-        "Breakdown day :",
-        datetime.date(2014, 1, 4), 
-        datetime.date(2014, 1, 4), 
-        datetime.date(2014, 1, 30))
+    elif type == "Dependency":
+        type_radio_condition = (df_RE['type_local'] == "Dépendance")
+        type_radio_data = df_RE[type_radio_condition]
+
+    elif type == "Industrial or commercial premises":
+        type_radio_condition = (df_RE['type_local'] == "Local industriel. commercial ou assimilé")
+        type_radio_data = df_RE[type_radio_condition]
+
+        
+
+    #Choice of region to display 
+    map_choice = map_right.selectbox('Which map do you want to vizualise?', ('Metropolitan France', 'Martinique', 'Reunion Island' ))
+    if map_choice == ('Metropolitan France') :
+      
+        #Affichage de la carte
+        fig = px.density_mapbox(get_df_lat_lon(type_radio_data), lat='latitude', lon='longitude',center=dict(lat=47.00, lon=2.19), zoom=5, radius=1)
+        fig.update_layout(width=1200, height=800, mapbox_style="open-street-map")
+        st.plotly_chart(fig)
+
+    if map_choice == 'Martinique':
+
+        #Affichage de la carte
+        fig2 = px.density_mapbox(get_df_lat_lon(type_radio_data), lat='latitude', lon='longitude', radius=1,center=dict(lat=16, lon=-61), zoom=5,mapbox_style="stamen-terrain")
+        fig2.update_layout(width=1200, height=800, mapbox_style="open-street-map")
+        st.plotly_chart(fig2)    
+
+    if map_choice == ('Reunion Island'):
+
+        #Affichage de la carte
+        fig3 = px.density_mapbox(get_df_lat_lon(type_radio_data), lat='latitude', lon='longitude', radius=1,center=dict(lat=-21.1, lon=55.3), zoom=7,mapbox_style="stamen-terrain")
+        fig3.update_layout(width=1200, height=800, mapbox_style="open-street-map")
+        st.plotly_chart(fig3)
+
+def main():
+    st.sidebar.write("Please close the sidebar after choosing the datatset to get the best experience !")
+    option_year = st.sidebar.selectbox('What year do you want to display?', ('Year 2017', 'Year 2018', 'Year 2019', 'Year 2020', 'Full'))
+
+    df_2017 = load_data_by_year(2017)
+    df_2018 = load_data_by_year(2018)
+    df_2019 = load_data_by_year(2019)
+    df_2020 = load_data_by_year(2020)
+    df_all = load_all_data(df_2017, df_2018, df_2019, df_2020)
 
 
-    filter_day_hour = (df['day'] == breakdown_day.day) & (df['hour'] >= breakdown_hour_start) & (df['hour'] <= breakdown_hour_end)
-    filtered_day_hour = df[filter_day_hour]
-    filtered_day_hour = filtered_day_hour.groupby('minute').apply(count_rows)
 
-    st.markdown("<br/>", unsafe_allow_html=True)
-    st.markdown("<h4 style='text-align: center;font-family=\'Helvetica\';'><b>" + str("Breakdown of rides on the " + str(breakdown_day) + "/01/2014 per minute between " + str(breakdown_hour_start) + ":00 and " + str(breakdown_hour_end) + ":00.") + "</b></h4>", unsafe_allow_html=True)
-
-    st.bar_chart(filtered_day_hour)
-
-    data = df[df["Date/Time"].dt.hour == breakdown_hour_start][["Lon", "Lat"]]
-
-    st.markdown("<br/>", unsafe_allow_html=True)
-    st.markdown("<h4 style='text-align: center;font-family=\'Helvetica\';'><b>" + str("All New-York Pick-up points on" + str(breakdown_day) +  "/01/2014 between " + str(breakdown_hour_start) + ":00 and " + str(breakdown_hour_end) + ":00.") + "</b></h4>", unsafe_allow_html=True)
-
-    midpoint = (np.average(data["Lat"]), np.average(data["Lon"]))
-    map(data, midpoint[0], midpoint[1], 11)
-
-else: 
-    st.markdown("<h1 style='text-align: center;font-family=\'Helvetica\';'>PART 3 - New-York Uber trips Visualization on 15/01/2015 🗽</h1>", unsafe_allow_html=True)
-
-    st.markdown('This is a dashboard to visualize relevant datas and charts about Ubers\'s trips on 15/01/2015 in New-York')
-    st.markdown('***')
-
-    #Expander Uber 2014 Dataset
-    expander = st.expander("Uber Trips 15/01/2015 Dataset")
-    col1, col2 = expander.columns(2)
-    col1.metric("Nombre de lignes", dfNy.shape[0])
-    col2.metric("Nombre de colonnes", dfNy.shape[1])
-    expander.write(dfNy.head())
-
+    if option_year == 'Year 2017':
+        print_main(df_2017)
     
+    elif option_year == "Year 2018":
+        print_main(df_2018)
+    
+    elif option_year == "Year 2019":
+        print_main(df_2019)
+    
+    elif option_year == "Year 2020":
+        print_main(df_2020)
+    
+    elif option_year == "Full":
+        print_main(df_all)
 
-    pickup_hour = st.slider(
-    "Select time range (of one hour, or more..) to visualize Pickup frequency :",
-    0, 
-    23, 
-    value=(0, 23))
 
-    #Filtered data for chart "Frequency of pickup bt Hour"
-    ny_in_interval = (dfNy['hour_pickup'] >= pickup_hour[0]) & (dfNy['hour_pickup'] <= pickup_hour[1])
-    filtered_data_ny = dfNy[ny_in_interval]
-    filtered_data_hour_ny = filtered_data_ny.groupby('hour_pickup').apply(count_rows)
-
-     #Chart Pickup by Hour
-    st.markdown("<h4 style='text-align: center;font-family=\'Helvetica\';'><b>Frequency of pickup by hour - Uber - 15/01/2015</b></h4>", unsafe_allow_html=True)
-    st.bar_chart(filtered_data_hour_ny)
-
-    #Chart Pickup by Minutes
-    filtered_data_minute_ny = filtered_data_ny.groupby('minute_pickup').apply(count_rows)
-
-    st.markdown("<h4 style='text-align: center;font-family=\'Helvetica\';'><b>Frequency of pickup by Minutes during the day - Uber - 15/01/2015</b></h4>", unsafe_allow_html=True)
-    st.bar_chart(filtered_data_minute_ny)
-
-    dfNy_plot = filtered_data_ny[["hour_pickup", "average_speed"]].groupby('hour_pickup').mean()
-    dfNy_plot = dfNy_plot.fillna(dfNy_plot["average_speed"].mean())
-    st.markdown("<h4 style='text-align: center;font-family=\'Helvetica\';'><b>Average trips' speed by hours during the day - Uber - 15/01/2015</b></h4>", unsafe_allow_html=True)
-    st.line_chart(dfNy_plot)
-
-st.markdown("<br/><br/><br/>", unsafe_allow_html=True)
-'''
-
+if __name__ == "__main__":
+    main()
 
 
     
