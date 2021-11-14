@@ -325,26 +325,26 @@ def print_main(df_RE, option_year=""):
         type_radio_data = type_radio_data.sample(frac=0.25)
 
     
-        if map_choice == ('Metropolitan France') :
-        
-            #Affichage de la carte
-            fig = px.density_mapbox(get_df_lat_lon(type_radio_data), lat='latitude', lon='longitude',center=dict(lat=47.00, lon=2.19), zoom=5, radius=1)
-            fig.update_layout(width=1200, height=800, mapbox_style="open-street-map")
-            st.plotly_chart(fig)
+   if map_choice == ('Metropolitan France') :
+    
+        #Affichage de la carte
+        fig = px.density_mapbox(get_df_lat_lon(type_radio_data), lat='latitude', lon='longitude',center=dict(lat=47.00, lon=2.19), zoom=5, radius=1)
+        fig.update_layout(width=1200, height=800, mapbox_style="open-street-map")
+        st.plotly_chart(fig)
 
-        if map_choice == 'Martinique':
+    if map_choice == 'Martinique':
 
-            #Affichage de la carte
-            fig2 = px.density_mapbox(get_df_lat_lon(type_radio_data), lat='latitude', lon='longitude', radius=1,center=dict(lat=16, lon=-61), zoom=5,mapbox_style="stamen-terrain")
-            fig2.update_layout(width=1200, height=800, mapbox_style="open-street-map")
-            st.plotly_chart(fig2)    
+        #Affichage de la carte
+        fig2 = px.density_mapbox(get_df_lat_lon(type_radio_data), lat='latitude', lon='longitude', radius=1,center=dict(lat=16, lon=-61), zoom=5,mapbox_style="stamen-terrain")
+        fig2.update_layout(width=1200, height=800, mapbox_style="open-street-map")
+        st.plotly_chart(fig2)    
 
-        if map_choice == ('Reunion Island'):
+    if map_choice == ('Reunion Island'):
 
-            #Affichage de la carte
-            fig3 = px.density_mapbox(get_df_lat_lon(type_radio_data), lat='latitude', lon='longitude', radius=1,center=dict(lat=-21.1, lon=55.3), zoom=7,mapbox_style="stamen-terrain")
-            fig3.update_layout(width=1200, height=800, mapbox_style="open-street-map")
-            st.plotly_chart(fig3)
+        #Affichage de la carte
+        fig3 = px.density_mapbox(get_df_lat_lon(type_radio_data), lat='latitude', lon='longitude', radius=1,center=dict(lat=-21.1, lon=55.3), zoom=7,mapbox_style="stamen-terrain")
+        fig3.update_layout(width=1200, height=800, mapbox_style="open-street-map")
+        st.plotly_chart(fig3)
 
 def main():
     st.sidebar.write("Please close the sidebar after choosing the datatset to get the best experience !")
