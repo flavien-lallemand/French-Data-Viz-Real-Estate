@@ -64,15 +64,6 @@ def get_year(dt):
 def get_dom(dt):
     return dt.day
 
-def get_weekday(dt):
-    return dt.weekday()
-
-def get_hour(dt):
-    return dt.hour
-
-def get_minute(dt):
-    return dt.minute
-
 
 def count_rows(rows):
     return len(rows)
@@ -103,10 +94,10 @@ def map(data, lat, lon, zoom):
 
 ############### START PROJECTS FUNCTIONS #########
 
-@st.cache(suppress_st_warning=True, allow_output_mutation=True, persist=True)
+@st.cache(allow_output_mutation=True)
 def load_data_by_year(year):
 
-    df = pd.read_csv('./Ressources/' + str(year) + '_final.csv', ',')
+    df = pd.read_csv('./Ressources/' + str(year) + '.csv', ',')
 
     #Pre-process data
     df['date_mutation'] = df['date_mutation'].map(pd.to_datetime)
@@ -119,7 +110,7 @@ def load_data_by_year(year):
 
     return df
 
-@st.cache(suppress_st_warning=True, allow_output_mutation=True, persist=True)
+@st.cache(allow_output_mutation=True)
 def load_all_data(df_2017, df_2018, df_2019, df_2020):
         
     frames = [df_2017, df_2018, df_2019, df_2020]
@@ -127,44 +118,57 @@ def load_all_data(df_2017, df_2018, df_2019, df_2020):
 
     return df
 
-xx = """ @timed
-@st.cache(suppress_st_warning=True, allow_output_mutation=True, persist=True)
-def load_all_data(percent):
-  #df_full = load_data('full.csv', ',')
 
-  df_2016 = load_data('full_2016.csv', ',', percent)
-  df_2017 = load_data('full_2017.csv', ',', percent)
-  df_2018 = load_data('full_2018.csv', ',', percent)
-  df_2019 = load_data('full_2019.csv', ',', percent)
-  df_2020 = load_data('full_2020.csv', ',', percent)
+#Filtered data for chart "Frequency by day of Month"
+@st.cache(allow_output_mutation=True)
+def df_frequency_DoM(df_RE, start_date, end_date):
+    in_interval = (df_RE['day'] >= start_date) & (df_RE['day'] <= end_date)
+    filtered_data = df_RE[['day','id_mutation']]
+    filtered_data = filtered_data[in_interval]
+    by_id = filtered_data.groupby(['id_mutation'])
+    filtered_data = filtered_data.groupby('day').apply(count_rows)
 
-  frames = [df_2016, df_2017, df_2018, df_2019, df_2020]
-  #frames = [df_2016, df_2017]
+    return filtered_data
 
-  df = pd.concat(frames)
-  #df = df_2016
 
-  #Pre-process data
-  df['date_mutation'] = df['date_mutation'].map(pd.to_datetime)
-  df['code_departement'] = df['code_departement'].map(str)
+#Filtered data for chart "Price per department"
+@st.cache(allow_output_mutation=True)
+def df_price_per_departement_sum(df_RE, start_date, end_date):
+    price_in_interval = (df_RE['day'] >= start_date) & (df_RE['day'] <= end_date)
+    filtered_data = df_RE[['day','id_mutation', 'valeur_fonciere', 'code_departement']]
+    price_filtered_data = filtered_data[price_in_interval]
+    price_filtered_data = price_filtered_data.groupby(['id_mutation', 'valeur_fonciere', 'code_departement'], as_index=False).first()
+    price_by_id = price_filtered_data.groupby('code_departement').sum()['valeur_fonciere']
 
-  df['day'] = df['date_mutation'].map(get_dom)
-  df['month'] = df['date_mutation'].map(get_month)
-  df['year'] = df['date_mutation'].map(get_year)
+    return price_by_id
 
-  return df """
+
+#Filtered data for chart "Mean per departement"
+@st.cache(allow_output_mutation=True)
+def df_mean_by_department(df_RE, start_date, end_date):
+    price_in_interval = (df_RE['day'] >= start_date) & (df_RE['day'] <= end_date)
+    filtered_data = df_RE[['day','id_mutation', 'valeur_fonciere', 'code_departement']]
+    price_filtered_data = filtered_data[price_in_interval]
+    price_filtered_data = price_filtered_data.groupby(['id_mutation', 'valeur_fonciere', 'code_departement'], as_index=False).first()
+    price_mean = price_filtered_data.groupby('code_departement').mean()['valeur_fonciere']
+
+    return price_mean
+
+    
+
+#Filtered data for chart "Number of transaction in range"
+@st.cache(allow_output_mutation=True)
+def transactions_in_price_range(df_RE, price_slider0, price_slider1):
+    slider_price_interval = (df_RE['valeur_fonciere'] >= price_slider0) & (df_RE['valeur_fonciere'] <= price_slider1)
+    filtered_data = df_RE[['day','id_mutation', 'valeur_fonciere', 'code_departement']]
+    transactions_slider_price_data = filtered_data[slider_price_interval]
+    transactions_slider_price__filtered_data = transactions_slider_price_data.groupby(['id_mutation', 'valeur_fonciere', 'code_departement'], as_index=False).first()
+    transaction_data_in_slider = transactions_slider_price__filtered_data.groupby('code_departement').apply(count_rows)
+    
+    return transaction_data_in_slider
 
 
 ############ END FUNTIONS ############
-
-############ START EXECUTION #########
-
-
-
-
-
-
-############ END EXECUTION #########
 
 ############ START FORMATTING #########
 
@@ -172,7 +176,7 @@ def load_all_data(percent):
 
 
 
-def print_main(df_RE):
+def print_main(df_RE, option_year=""):
 
 
     st.markdown("<h1 style='text-align: center;font-family=\'Helvetica\';'>PROJECT - Valeurs foncières Visualization 👁</h1>", unsafe_allow_html=True)
@@ -181,11 +185,10 @@ def print_main(df_RE):
     st.markdown('***')
 
     #Expander Real Estate Dataset Values
-    expander = st.expander("Real Estate Values - 2016")
+    expander = st.expander("Real Estate Values")
     col1, col2 = expander.columns(2)
     col1.metric("Nombre de lignes", df_RE.shape[0])
     col2.metric("Nombre de colonnes", df_RE.shape[1])
-
 
 
 
@@ -207,38 +210,28 @@ def print_main(df_RE):
     st.markdown("<br/>", unsafe_allow_html=True)
 
     #Filtered data for chart "Frequency by day of Month"
-    in_interval = (df_RE['day'] >= start_date.day) & (df_RE['day'] <= end_date.day)
-    filtered_data = df_RE[in_interval]
-    by_id = filtered_data.groupby(['id_mutation'])
-    filtered_data = filtered_data.groupby('day').apply(count_rows)
+    
+    
 
     #Chart by Day and Hours
     st.markdown("<h4 style='text-align: center;font-family=\'Helvetica\';'><b>Frequency by DoM - Valeurs foncières</b></h4>", unsafe_allow_html=True)
-    st.bar_chart(filtered_data)
+    st.bar_chart(df_frequency_DoM(df_RE, start_date.day, end_date.day))
     st.markdown('***')
 
-
-    #Filtered data for chart "Price per department"
-    price_in_interval = (df_RE['day'] >= start_date.day) & (df_RE['day'] <= end_date.day)
-    price_filtered_data = df_RE[price_in_interval]
-    price_filtered_data = price_filtered_data.groupby(['id_mutation', 'valeur_fonciere', 'code_departement'], as_index=False).first()
-    price_by_id = price_filtered_data.groupby('code_departement').sum()['valeur_fonciere']
 
 
 
     #Chart show price by code_departement
     st.markdown("<h4 style='text-align: center;margin-left: -10%;font-family=\'Helvetica\';'><b>Sum of transactions by department - Valeurs foncières - Euros 💶</b></h4>", unsafe_allow_html=True)
-    st.bar_chart(price_by_id)
+    st.bar_chart(df_price_per_departement_sum(df_RE, start_date.day, end_date.day))
     st.markdown('***')
 
 
 
     #External plot (using plotly) - N°1
-    #Filtered data for chart "Mean per departement"
-    mean_price_by_department = price_filtered_data.groupby('code_departement').mean()['valeur_fonciere']
-
+    
     #Chart of "Mean per department"
-    fig = px.bar(mean_price_by_department)
+    fig = px.bar(df_mean_by_department(df_RE, start_date.day, end_date.day))
     
     st.markdown("<h4 style='text-align: center;margin-left: -10%;font-family=\'Helvetica\';'><b>Mean of transaction by department - Euros 💶</b></h4>", unsafe_allow_html=True)
 
@@ -249,12 +242,9 @@ def print_main(df_RE):
     st.markdown('***')
 
 
-    
 
     #External plot (using plotly) - N°2
     #Slider
-    max_price_df = df_RE.groupby(['id_mutation', 'valeur_fonciere', 'code_departement'], as_index=False).first()
-    max_price_df = int(max_price_df['valeur_fonciere'].max())
     price_slider = st.slider(
     "Select a range of price to visualize number of transaction in this range: ",
     0, 
@@ -266,13 +256,10 @@ def print_main(df_RE):
     left_col_price, right_col_price = st.columns(2)
 
     #Filtered data for chart "Number of transaction in range"
-    slider_price_interval = (df_RE['valeur_fonciere'] >= price_slider[0]) & (df_RE['valeur_fonciere'] <= price_slider[1])
-    transactions_slider_price_data = df_RE[slider_price_interval]
-    transactions_slider_price__filtered_data = transactions_slider_price_data.groupby(['id_mutation', 'valeur_fonciere', 'code_departement'], as_index=False).first()
-    transaction_data_in_slider = transactions_slider_price__filtered_data.groupby('code_departement').apply(count_rows)
-    
+
     #Chart of "Number of transaction in price range"
-    fig = px.bar(transaction_data_in_slider)
+    
+    fig = px.bar(transactions_in_price_range(df_RE, price_slider[0], price_slider[1]))
     
     left_col_price.markdown("<h4 style='text-align: center;margin-left: -10%;font-family=\'Helvetica\';'><b>Number of transactions by department in the selected price range - Euros 💶</b></h4>", unsafe_allow_html=True)
 
@@ -330,27 +317,34 @@ def print_main(df_RE):
         
 
     #Choice of region to display 
-    map_choice = map_right.selectbox('Which map do you want to vizualise?', ('Metropolitan France', 'Martinique', 'Reunion Island' ))
-    if map_choice == ('Metropolitan France') :
-      
-        #Affichage de la carte
-        fig = px.density_mapbox(get_df_lat_lon(type_radio_data), lat='latitude', lon='longitude',center=dict(lat=47.00, lon=2.19), zoom=5, radius=1)
-        fig.update_layout(width=1200, height=800, mapbox_style="open-street-map")
-        st.plotly_chart(fig)
+    #We don't allow user to visualize Metropolitain France's map on the full dataset because it causign application crash...
+    if option_year != "Full" :
+        map_choice = map_right.selectbox('Which map do you want to visualize?', ('Metropolitan France', 'Martinique', 'Reunion Island' ))
+    else : 
+        map_choice = map_right.selectbox('Which map do you want to visualize? (Only half of dataset will be display to prevent any crash of the application !', ('Metropolitan France', 'Martinique', 'Reunion Island' ))
+        type_radio_data = type_radio_data.sample(frac=0.25)
 
-    if map_choice == 'Martinique':
+    
+        if map_choice == ('Metropolitan France') :
+        
+            #Affichage de la carte
+            fig = px.density_mapbox(get_df_lat_lon(type_radio_data), lat='latitude', lon='longitude',center=dict(lat=47.00, lon=2.19), zoom=5, radius=1)
+            fig.update_layout(width=1200, height=800, mapbox_style="open-street-map")
+            st.plotly_chart(fig)
 
-        #Affichage de la carte
-        fig2 = px.density_mapbox(get_df_lat_lon(type_radio_data), lat='latitude', lon='longitude', radius=1,center=dict(lat=16, lon=-61), zoom=5,mapbox_style="stamen-terrain")
-        fig2.update_layout(width=1200, height=800, mapbox_style="open-street-map")
-        st.plotly_chart(fig2)    
+        if map_choice == 'Martinique':
 
-    if map_choice == ('Reunion Island'):
+            #Affichage de la carte
+            fig2 = px.density_mapbox(get_df_lat_lon(type_radio_data), lat='latitude', lon='longitude', radius=1,center=dict(lat=16, lon=-61), zoom=5,mapbox_style="stamen-terrain")
+            fig2.update_layout(width=1200, height=800, mapbox_style="open-street-map")
+            st.plotly_chart(fig2)    
 
-        #Affichage de la carte
-        fig3 = px.density_mapbox(get_df_lat_lon(type_radio_data), lat='latitude', lon='longitude', radius=1,center=dict(lat=-21.1, lon=55.3), zoom=7,mapbox_style="stamen-terrain")
-        fig3.update_layout(width=1200, height=800, mapbox_style="open-street-map")
-        st.plotly_chart(fig3)
+        if map_choice == ('Reunion Island'):
+
+            #Affichage de la carte
+            fig3 = px.density_mapbox(get_df_lat_lon(type_radio_data), lat='latitude', lon='longitude', radius=1,center=dict(lat=-21.1, lon=55.3), zoom=7,mapbox_style="stamen-terrain")
+            fig3.update_layout(width=1200, height=800, mapbox_style="open-street-map")
+            st.plotly_chart(fig3)
 
 def main():
     st.sidebar.write("Please close the sidebar after choosing the datatset to get the best experience !")
@@ -377,7 +371,7 @@ def main():
         print_main(df_2020)
     
     elif option_year == "Full":
-        print_main(df_all)
+        print_main(df_all, option_year)
 
 
 if __name__ == "__main__":
