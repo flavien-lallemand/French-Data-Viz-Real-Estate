@@ -325,7 +325,7 @@ def print_main(df_RE, option_year=""):
         type_radio_data = type_radio_data.sample(frac=0.25)
 
     
-   if map_choice == ('Metropolitan France') :
+    if map_choice == ('Metropolitan France') :
     
         #Affichage de la carte
         fig = px.density_mapbox(get_df_lat_lon(type_radio_data), lat='latitude', lon='longitude',center=dict(lat=47.00, lon=2.19), zoom=5, radius=1)
