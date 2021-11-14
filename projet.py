@@ -214,7 +214,7 @@ def print_main(df_RE, option_year=""):
     
 
     #Chart by Day and Hours
-    st.markdown("<h4 style='text-align: center;font-family=\'Helvetica\';'><b>Frequency by DoM - Valeurs foncières</b></h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='text-align: center;font-family=\'Helvetica\';'><b>Frequency by DoM of transactions in the selected date range</b></h4>", unsafe_allow_html=True)
     st.bar_chart(df_frequency_DoM(df_RE, start_date.day, end_date.day))
     st.markdown('***')
 
@@ -222,7 +222,7 @@ def print_main(df_RE, option_year=""):
 
 
     #Chart show price by code_departement
-    st.markdown("<h4 style='text-align: center;margin-left: -10%;font-family=\'Helvetica\';'><b>Sum of transactions by department - Valeurs foncières - Euros 💶</b></h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='text-align: center;margin-left: -10%;font-family=\'Helvetica\';'><b>Sum of transactions by department in the selected date range - Euros 💶</b></h4>", unsafe_allow_html=True)
     st.bar_chart(df_price_per_departement_sum(df_RE, start_date.day, end_date.day))
     st.markdown('***')
 
