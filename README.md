@@ -77,7 +77,7 @@ streamlit run projet.py
 ```
 
 ### PROBLÈMES
-Nous n'avons pas réussi à solutionner un problème que nous avons pourtant longuement creusé : L'affichage de la totalité du dataset globale sur la HeatMap. 
+Nous n'avons pas réussi à solutionner un problème que nous avons pourtant longuement creusé : L'affichage de la totalité du dataset GLOBAL (et seulement le global, cela marche très bien sur les datasets de 2017 / 2018 / 2019 / 2020 quand ils sont affichés seuls) sur la HeatMap. 
 Nous nous sommes donc résolu à affiché seulement la moitité des lignes par le biais de la fonction sample afin de réduire la charge. La fonction sample prenant des lignes aléatoirement, nous nous retrouvons quand même avec un échantillon représentatif. 
 
 
